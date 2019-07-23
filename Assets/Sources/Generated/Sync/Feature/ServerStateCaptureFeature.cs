@@ -16,8 +16,14 @@ public class ServerStateCaptureFeature : Feature
         Add(new ServerCaptureRemovedMoverSystem(contexts, services));
         Add(new ServerCaptureChangedMoveSystem(contexts, services));
         Add(new ServerCaptureRemovedMoveSystem(contexts, services));
+        Add(new ServerCaptureChangedLastMoveTickSystem(contexts, services));
+        Add(new ServerCaptureRemovedLastMoveTickSystem(contexts, services));
         Add(new ServerCaptureChangedMoverIDSystem(contexts, services));
         Add(new ServerCaptureRemovedMoverIDSystem(contexts, services));
+        Add(new ServerCaptureChangedTickSystem(contexts, services));
+        Add(new ServerCaptureRemovedTickSystem(contexts, services));
+        Add(new ServerCaptureChangedIceSystem(contexts, services));
+        Add(new ServerCaptureRemovedIceSystem(contexts, services));
         Add(new ServerCaptureChangedCharacterSystem(contexts, services));
         Add(new ServerCaptureRemovedCharacterSystem(contexts, services));
         Add(new ServerCaptureChangedControlledBySystem(contexts, services));

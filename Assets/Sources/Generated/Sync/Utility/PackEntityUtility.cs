@@ -48,10 +48,31 @@ public static class PackEntityUtility
 			counter++;
 		}
 
+			var hasLastMoveTick = false;
+        if(e.hasLastMoveTick)
+		{
+			hasLastMoveTick = true;
+			counter++;
+		}
+
 			var hasMoverID = false;
         if(e.hasMoverID)
 		{
 			hasMoverID = true;
+			counter++;
+		}
+
+			var hasTick = false;
+        if(e.hasTick)
+		{
+			hasTick = true;
+			counter++;
+		}
+
+			var hasIce = false;
+        if(e.hasIce)
+		{
+			hasIce = true;
 			counter++;
 		}
 
@@ -116,14 +137,29 @@ public static class PackEntityUtility
             e.move.Serialize(buffer);
         }
 
+	        if (hasLastMoveTick)
+        {
+            e.lastMoveTick.Serialize(buffer);
+        }
+
 	        if (hasMoverID)
         {
             e.moverID.Serialize(buffer);
         }
 
+	        if (hasTick)
+        {
+            e.tick.Serialize(buffer);
+        }
+
+	        if (hasIce)
+        {
+            e.ice.Serialize(buffer);
+        }
+
 	        if (hasCharacter)
         {
-            buffer.AddUShort(7);
+            buffer.AddUShort(10);
         }
 
 	        if (hasControlledBy)
@@ -138,7 +174,7 @@ public static class PackEntityUtility
 
 	        if (hasSync)
         {
-            buffer.AddUShort(10);
+            buffer.AddUShort(13);
         }
 
 		}

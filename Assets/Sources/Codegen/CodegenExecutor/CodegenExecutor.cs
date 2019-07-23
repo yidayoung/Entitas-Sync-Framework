@@ -312,6 +312,26 @@ public class CodegenExecutor : ScriptableObject
         }
 
         #endregion
+        
+        #region compare entity utility
+
+        {
+            var compareUtilityTemplate = new CompareEntityUtilityGenerator();
+            var d = new Dictionary<string, object>
+            {
+                {"ComponentNames", components.Select(x => x.Item1).ToArray()},
+                {"ComponentIds", components.Select(x => x.Item2).ToArray()},
+                {"IsTags", components.Select(x => x.Item3.Length == 0).ToArray()}
+            };
+
+            compareUtilityTemplate.Session = d;
+            compareUtilityTemplate.Initialize();
+            var output = compareUtilityTemplate.TransformText();
+
+            SaveFile("Sync/Utility/", "CompareEntityUtility.cs", output);
+        }
+
+        #endregion
 
         #region feature
 

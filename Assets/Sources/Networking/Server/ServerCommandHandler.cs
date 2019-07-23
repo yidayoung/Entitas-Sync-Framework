@@ -27,10 +27,14 @@ namespace Sources.Networking.Server
             _connectionsGroup = _game.GetGroup(GameMatcher.Connection);
         }
 
+        public void HandleCreateIceCommand(ref ClientCreateIceCommand command)
+        {
+            GameUtil.AddLocalActionList(_game, new IceAction(command, CurrentClientId.ToString()));
+        }
+
         public void HandleBeeMoveCommand(ref ClientBeeMoveCommand command)
         {
-            Logger.I.Log(this, $"Move-{CurrentClientId}: tar: {command.Target}, tick: {command.Tick}");
-            //@TODO 消息进待处理队列
+            Logger.I.Log(this, $"Move-{CurrentClientId}: tar: {command.Target.x:F4},{command.Target.y:F4} tick: {command.Tick}");
             GameUtil.AddLocalActionList(_game, new MoveAction(command, CurrentClientId.ToString()));
         }
 
@@ -43,8 +47,7 @@ namespace Sources.Networking.Server
 
         public void HandleCreateBeeCommand(ref ClientCreateBeeCommand command)
         {
-            Logger.I.Log(this, $"Create-{CurrentClientId}: {command.Position}, {command.Direction}");
-            //@TODO 收到的创建动作应该先缓存到动作序列里，等服务器帧到的时候自然会取，之后服务器演算后推送给其他客户端状态
+            Logger.I.Log(this, $"Create-{CurrentClientId}: {command.Position.x:F4},{command.Position.y:F4}, {command.Direction}");
             GameUtil.AddLocalActionList(_game, new CreateAction(command, CurrentClientId.ToString()));
         }
 

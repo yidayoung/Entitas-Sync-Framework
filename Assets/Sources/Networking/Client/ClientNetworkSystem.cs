@@ -18,7 +18,7 @@ namespace Sources.Networking.Client
         public ConnectionId ConnectionId;
         public Peer         ServerConnection;
 
-        public ushort TickRate           = 20;
+        public ushort TickRate           = 50;
         public int    PanicCleanupTarget = 6;
         public int    PanicStateCount    = 10;
 

@@ -24,7 +24,7 @@ public class ServerCaptureRemovedSyncSystem : ReactiveSystem<GameEntity>
 
         foreach (var e in entities) {
 		    _server.RemovedComponents.AddUShort(e.id.Value);
-			_server.RemovedComponents.AddUShort(10);
+			_server.RemovedComponents.AddUShort(13);
 		    _server.RemovedComponentsCount++;
 		}
 	}

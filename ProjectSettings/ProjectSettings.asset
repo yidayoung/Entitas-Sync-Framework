@@ -527,7 +527,7 @@ PlayerSettings:
   webGLLinkerTarget: 1
   webGLThreadsSupport: 0
   scriptingDefineSymbols:
-    1: ODIN_INSPECTOR;NETSTACK_SPAN
+    1: ODIN_INSPECTOR;NETSTACK_SPAN;CLIENT_MOD
   platformArchitecture: {}
   scriptingBackend: {}
   il2cppCompilerConfiguration: {}

@@ -7,11 +7,12 @@ public partial class DirectionComponent : INetworkComponent
 	{
 		bitBuffer.AddUShort(2);
 
-        bitBuffer.AddUShort(HalfPrecision.Compress(Value));
+		bitBuffer.AddFloat(Value);
 	}
 
 	public void Deserialize(BitBuffer bitBuffer)
 	{
-        Value = HalfPrecision.Decompress(bitBuffer.ReadUShort());
+
+        Value = bitBuffer.ReadFloat();
 	}
 }

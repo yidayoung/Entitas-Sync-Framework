@@ -4,7 +4,7 @@ public partial class MoverIDComponent : INetworkComponent
 {
     public void Serialize(BitBuffer bitBuffer)
 	{
-		bitBuffer.AddUShort(6);
+		bitBuffer.AddUShort(7);
 
 		bitBuffer.AddString(value); 
 	}

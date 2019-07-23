@@ -5,6 +5,7 @@ using Sources.GamePlay.Common;
 using Sources.Networking.Client;
 using UnityEngine;
 using Util;
+using Logger = Sources.Tools.Logger;
 
 
 public class CreateMoverSystem : ReactiveSystem<InputEntity>
@@ -18,8 +19,8 @@ public class CreateMoverSystem : ReactiveSystem<InputEntity>
     {
         _gameContext = contexts.game;
         _inputContext = contexts.input;
-        ContextEntityChanged cachedDestroyEntity = Destroymover;
-        _gameContext.OnEntityWillBeDestroyed += cachedDestroyEntity;
+//        ContextEntityChanged cachedDestroyEntity = Destorymover;
+//        _gameContext.OnEntityWillBeDestroyed += cachedDestroyEntity;
         _movers = contexts.game.GetGroup(GameMatcher.AllOf(GameMatcher.Mover));
         _client = services.ClientSystem;
     }
@@ -39,42 +40,35 @@ public class CreateMoverSystem : ReactiveSystem<InputEntity>
         var moversList = new List<GameEntity>(_movers.GetEntities());
         var clientId = _client.ConnectionId.Id.ToString();
         var curMover = moversList.Find(m => m.moverID.value == clientId);
+        var curTick = _gameContext.tick.CurrentTick;
 
         if (curMover != null)
         {
+            var iceCommand = new ClientCreateIceCommand
+            {
+                Tick = curTick + 1,
+                LastsTick = 150
+            };
+            var iceAction = new IceAction(iceCommand, clientId);
+            GameUtil.AddLocalActionList(_gameContext, iceAction);
+            _client.EnqueueCommand(iceCommand);
             return;
         }
-        
+
         foreach (var e in entities)
         {
             var position = e.mouseDown.position;
             var direction = Random.Range(0, 360);
-            var mover = _gameContext.CreateEntity();
-            mover.AddMoverID(_client.ConnectionId.Id.ToString());
-            mover.isMover = true;
-            mover.AddPosition(position);
-            mover.AddViewPosition(position);
-            mover.AddDirection(direction);
-            mover.AddSprite("Bee");
             var createCommand = new ClientCreateBeeCommand
             {
                 Position = position, Direction = direction,
-                Tick = _gameContext.tick.CurrentTick, Sprite = "bee"
+                Tick = curTick + 1, Sprite = "bee"
             };
-            var createAction = new CreateAction(createCommand, _client.ConnectionId.Id.ToString());
+            var createAction = new CreateAction(createCommand, clientId);
+            Debug.Log($"createAction : ${position.x:f5},{position.y:f5}");
             GameUtil.AddLocalActionList(_gameContext, createAction);
             _client.EnqueueCommand(createCommand);
         }
     }
-
-
-    protected virtual void Destroymover(IContext context, IEntity e)
-    {
-        var entity = (GameEntity) e;
-        if (entity.hasView)
-        {
-            entity.view.gameObject.Unlink();
-            GameObject.Destroy(entity.view.gameObject);
-        }
-    }
+    
 }

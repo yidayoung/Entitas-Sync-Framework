@@ -7,13 +7,15 @@ public partial class PositionComponent : INetworkComponent
 	{
 		bitBuffer.AddUShort(1);
 
-        bitBuffer.AddUShort(HalfPrecision.Compress(Value.x));
-        bitBuffer.AddUShort(HalfPrecision.Compress(Value.y));
+		bitBuffer.AddFloat(Value.x);
+		bitBuffer.AddFloat(Value.y);
+
 	}
 
 	public void Deserialize(BitBuffer bitBuffer)
 	{
-        Value.x = HalfPrecision.Decompress(bitBuffer.ReadUShort());
-        Value.y = HalfPrecision.Decompress(bitBuffer.ReadUShort());
+
+		Value.x = bitBuffer.ReadFloat();
+        Value.y = bitBuffer.ReadFloat();
 	}
 }

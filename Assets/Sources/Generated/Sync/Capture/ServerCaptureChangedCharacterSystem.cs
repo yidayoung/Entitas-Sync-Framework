@@ -25,7 +25,7 @@ public class ServerCaptureChangedCharacterSystem : ReactiveSystem<GameEntity>
 
 		foreach (var e in entities) {
 		    _server.ChangedComponents.AddUShort(e.id.Value);
-            _server.ChangedComponents.AddUShort(7);
+            _server.ChangedComponents.AddUShort(10);
 			_server.ChangedComponentsCount++;
 		}
 	}

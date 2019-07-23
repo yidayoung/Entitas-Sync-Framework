@@ -24,7 +24,7 @@ public class ServerCaptureRemovedControlledBySystem : ReactiveSystem<GameEntity>
 
         foreach (var e in entities) {
 		    _server.RemovedComponents.AddUShort(e.id.Value);
-			_server.RemovedComponents.AddUShort(8);
+			_server.RemovedComponents.AddUShort(11);
 		    _server.RemovedComponentsCount++;
 		}
 	}

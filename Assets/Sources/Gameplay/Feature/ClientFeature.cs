@@ -9,5 +9,7 @@ public class ClientFeature : Feature
 
         Add(new ClientNetworkFeature(contexts, services));
         Add(new CommonGeneratedFeature(contexts));
+
+        Add(new DestroyDestroyedGameSystem(services.BackContext));
     }
 }

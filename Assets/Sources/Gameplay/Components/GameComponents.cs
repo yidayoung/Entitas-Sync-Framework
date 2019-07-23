@@ -1,11 +1,13 @@
 using System.Collections.Generic;
+using Codegen.CodegenAttributes;
 using Entitas;
 using Entitas.CodeGeneration.Attributes;
 using Sources.GamePlay.Common;
-using UnityEngine;
+
 
 [Game, Unique]
-public class TickComponent : IComponent
+[Sync]
+public partial class TickComponent : IComponent
 {
     public long CurrentTick;
 }

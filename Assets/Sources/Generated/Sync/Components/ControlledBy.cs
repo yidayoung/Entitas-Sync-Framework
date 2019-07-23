@@ -4,7 +4,7 @@ public partial class ControlledBy : INetworkComponent
 {
     public void Serialize(BitBuffer bitBuffer)
 	{
-		bitBuffer.AddUShort(8);
+		bitBuffer.AddUShort(11);
 
 		bitBuffer.AddUShort(Value); 
 	}

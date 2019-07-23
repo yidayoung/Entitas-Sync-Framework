@@ -2,16 +2,18 @@ using System;
 using System.Collections.Generic;
 using ENet;
 using Entitas;
+using NetStack.Compression;
 using Sources.Networking.Client;
 using Sources.Networking.Server;
 using UnityEngine;
+using Logger = Sources.Tools.Logger;
 
 public class GameController : MonoBehaviour
 {
     public static GameController I;
     [NonSerialized] public Mode Mode = Mode.Inactive;
 
-    [Header("Server")] public int TargetTickPerSecond = 20;
+    [Header("Server")] public int TargetTickPerSecond = 50;
 
     [Header("Client")] public int PanicStateCount = 10;
     public int PanicCleanupTarget = 6;
@@ -35,7 +37,7 @@ public class GameController : MonoBehaviour
 
     private string _ip = "127.0.0.1";
     private float _lastUpdate;
-    private string _message = "";
+//    private string _message = "";
     private ushort _port = 9500;
 
     private int _lastId;
@@ -44,7 +46,7 @@ public class GameController : MonoBehaviour
     private bool _isClientInit;
 
     private GameContext _backGameContext;
-    
+
     private void Awake()
     {
         I = this;
@@ -53,7 +55,6 @@ public class GameController : MonoBehaviour
         _contexts = Contexts.sharedInstance;
         _connectionsGroup = _contexts.game.GetGroup(GameMatcher.Connection);
         _lastUpdate = Time.realtimeSinceStartup;
-        
     }
 
     public void StartServer()
@@ -84,25 +85,28 @@ public class GameController : MonoBehaviour
         _backGameContext.AddEntityIndex(new Entitas.PrimaryEntityIndex<GameEntity, ushort>(
             "Id",
             _backGameContext.GetGroup(GameMatcher.Id),
-            (e, c) => ((IdComponent)c).Value));
-        
-        if (Application.isPlaying) {
+            (e, c) => ((IdComponent) c).Value));
+
+        if (Application.isPlaying)
+        {
             var observer = new Entitas.VisualDebugging.Unity.ContextObserver(_backGameContext);
             observer.gameObject.name = "backGame";
             DontDestroyOnLoad(observer.gameObject);
         }
-        
+
         _client = new ClientNetworkSystem(_contexts.game, _backGameContext)
         {
             TickRate = (ushort) TargetTickPerSecond,
             PanicStateCount = PanicStateCount,
             PanicCleanupTarget = PanicCleanupTarget
         };
-
+        
 
         var services = new Services
         {
-            ClientSystem = _client
+            ClientSystem = _client,
+            BackContext = _backGameContext
+            
         };
 
         _clientFeature = new ClientFeature(_contexts, services);
@@ -131,7 +135,7 @@ public class GameController : MonoBehaviour
                 case Mode.Server:
                     if (!_isInit)
                     {
-                        _server.Initialize();
+//                        _server.Initialize();
                         _serverFeature.Initialize();
                         _isInit = true;
                     }
@@ -265,27 +269,14 @@ public class GameController : MonoBehaviour
 
                         if (GUILayout.Button("Set tickRate"))
                             _client.EnqueueCommand(new ClientSetTickrateCommand {Tickrate = _tickrate});
-
-                        var str = "States :";
-                        for (var i = 0; i < _client.StatesCount; i++) str += "#";
-                        GUILayout.Label(str);
+                        
                         GUILayout.EndHorizontal();
-
-                        GUILayout.BeginHorizontal();
-                        _message = GUILayout.TextField(_message, GUILayout.Width(120));
-                        if (GUILayout.Button("Send message"))
-                            _client.EnqueueCommand(new ClientChatMessageCommand {Message = _message});
-                        if (GUILayout.Button("Request character"))
-                            _client.EnqueueCommand(new ClientRequestCharacterCommand());
-                        if (GUILayout.Button("Send Test"))
+                        if (GUILayout.Button("Disconnect"))
                         {
-                            _client.EnqueueCommand(new ClientTestCommand {Value = Vector3.back, BoolValue = false});
+                            _client.Disconnect();
+                            _contexts.game.Reset();
+                            _backGameContext.Reset();
                         }
-//                        if (GUILayout.Button("Create Bee"))
-//                            _client.EnqueueCommand();
-
-                        GUILayout.EndHorizontal();
-                        if (GUILayout.Button("Disconnect")) _client.Disconnect();
                         break;
                     case ClientState.Disconnecting:
                         GUILayout.Label("Disconnecting");

@@ -1,5 +1,6 @@
 using Entitas;
 using UnityEngine;
+using Util;
 
 public class EmitInputSystem : IInitializeSystem, IExecuteSystem
 {
@@ -21,22 +22,21 @@ public class EmitInputSystem : IInitializeSystem, IExecuteSystem
         _context.isRightMouse = true;
         _rightMouseEntity = _context.rightMouseEntity;
     }
-    
+
     public void Execute()
     {
         if (!Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1)) return;
         // mouse position
         if (Camera.main == null) return;
-            Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        Vector2 mousePosition = GameUtil.CutVector(Camera.main.ScreenToWorldPoint(Input.mousePosition));
         if (Input.GetMouseButtonDown(0))
         {
             _leftMouseEntity.ReplaceMouseDown(mousePosition);
         }
-        
+
         if (Input.GetMouseButtonDown(1))
         {
             _rightMouseEntity.ReplaceMouseDown(mousePosition);
         }
     }
-
 }

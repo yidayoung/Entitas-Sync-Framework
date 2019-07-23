@@ -7,17 +7,20 @@ public partial class MoveComponent : INetworkComponent
 	{
 		bitBuffer.AddUShort(5);
 
-        bitBuffer.AddUShort(HalfPrecision.Compress(target.x));
-        bitBuffer.AddUShort(HalfPrecision.Compress(target.y));
+		bitBuffer.AddFloat(target.x);
+		bitBuffer.AddFloat(target.y);
+
 		bitBuffer.AddLong(move_time); 
-        bitBuffer.AddUShort(HalfPrecision.Compress(start_direction));
+		bitBuffer.AddFloat(start_direction);
 	}
 
 	public void Deserialize(BitBuffer bitBuffer)
 	{
-        target.x = HalfPrecision.Decompress(bitBuffer.ReadUShort());
-        target.y = HalfPrecision.Decompress(bitBuffer.ReadUShort());
+
+		target.x = bitBuffer.ReadFloat();
+        target.y = bitBuffer.ReadFloat();
 		move_time = bitBuffer.ReadLong(); 
-        start_direction = HalfPrecision.Decompress(bitBuffer.ReadUShort());
+
+        start_direction = bitBuffer.ReadFloat();
 	}
 }

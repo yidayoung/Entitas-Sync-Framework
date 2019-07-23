@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Entitas.Unity;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
 
 namespace Sources.GamePlay.Common
@@ -7,7 +10,8 @@ namespace Sources.GamePlay.Common
     public enum ActionType
     {
         Create = 1,
-        Move
+        Move,
+        CreateIce
     }
 
     public class Action : IComparable<Action>
@@ -54,65 +58,63 @@ namespace Sources.GamePlay.Common
 
         public override string ToString()
         {
-            return "tick:" + Tick + " type:" + _type + " id:" + Id;
+            return $"tick:{Tick} type: {_type} id: {Id}";
         }
     }
 
-//    public class IceAction : Action
-//    {
-//        readonly long lasts;
-//        public IceAction(long startTick, long lasts, string owner) : base(startTick, NetUtil.ICE, owner)
-//        {
-//            this.lasts = lasts;
-//            Id = owner;
-//        }
-//
-//        public IceAction(ByteBuffer buffer) : base(buffer, NetUtil.ICE)
-//        {
-//            lasts = buffer.ReadLong();
-//        }
-//
-//        public override byte[] Format()
-//        {
-//            ByteBuffer buffer = new ByteBuffer();
-//            buffer.WriteString(Util.NetUtil.ICE);
-//            buffer.WriteLong(Tick);
-//            buffer.WriteString(Id);
-//            buffer.WriteLong(lasts);
-//            return buffer.Getbuffer();
-//        }
-//
-//        private bool HasMe(GameContext gameContext)
-//        {
-//            var _ices = new List<GameEntity>(gameContext.GetGroup(GameMatcher.Ice).GetEntities());
-//            if (_ices.Find(x => x.ice.owner == Id) != null)
-//            {
-//                return true;
-//            }
-//            return false;
-//        }
-//        public override void ApplyAction(GameContext gameContext, InputContext inputContext)
-//        {
-//            //冰块生效逻辑
-//            //检查当前冰块是否已经过期如果过期就什么都不做
-//            //检查当前环境中是否有完全相同的冰块，如果有就什么都不做
-//            //如果没有就创建冰块
-//            //if (tick + lasts < gameContext.tick.currentTick)
-//            //{
-//            //    return;
-//            //}
-//            //if (HasMe(gameContext))
-//            //{
-//            //    return;
-//            //}
-//            var Ice = gameContext.CreateEntity();
-//            Ice.AddIce(Id, Tick, lasts);
-//            Ice.isChecked = true;
-//            Ice.AddSprite("ice");
-//            base.ApplyAction(gameContext, inputContext);
-//        }
-//
-//    }
+    public class IceDestoryListener : IDestroyedListener
+    {
+        public void OnDestroyed(GameEntity entity)
+        {
+            if (!entity.hasView) return;
+            entity.view.gameObject.Unlink();
+            Object.Destroy(entity.view.gameObject);
+        }
+        
+    }
+    
+    
+    public class IceAction : Action
+    {
+        private readonly long _lasts;
+        public IceAction(ClientCreateIceCommand command, string moverId) : base(command, command.Tick,
+            ActionType.CreateIce, moverId)
+        {
+            _lasts = command.LastsTick;
+        }
+        
+        private bool HasMe(GameContext gameContext)
+        {
+            var ices = new List<GameEntity>(gameContext.GetGroup(GameMatcher.Ice).GetEntities());
+            return ices.Find(x => x.ice.Owner == Id) != null;
+        }
+        public override void ApplyAction(GameContext gameContext)
+        {
+            //冰块生效逻辑
+            //检查当前冰块是否已经过期如果过期就什么都不做
+            //检查当前环境中是否有完全相同的冰块，如果有就什么都不做
+            //如果没有就创建冰块
+            //if (tick + lasts < gameContext.tick.currentTick)
+            //{
+            //    return;
+            //}
+            //if (HasMe(gameContext))
+            //{
+            //    return;
+            //}
+            var ice = gameContext.CreateEntity();
+            ice.AddIce(Id, Tick, _lasts);
+            ice.isSync = true;
+            ice.AddSprite("ice");
+            ice.AddDestroyedListener(new IceDestoryListener());
+        }
+
+        public override string ToString()
+        {
+            return "create Ice" + base.ToString();
+        }
+        
+    }
 
     public class CreateAction : Action
     {
@@ -131,7 +133,6 @@ namespace Sources.GamePlay.Common
             var mover = gameContext.CreateEntity();
             mover.isMover = true;
             mover.AddPosition(command.Position);
-            mover.AddViewPosition(command.Position);
             mover.AddDirection(command.Direction);
             mover.AddSprite(command.Sprite);
             mover.AddMoverID(Id);
@@ -140,7 +141,7 @@ namespace Sources.GamePlay.Common
 
         public override string ToString()
         {
-            return "do_create:" + base.ToString();
+            return $"do_create: position: {((ClientCreateBeeCommand)Command).Position}" + base.ToString();
         }
     }
 

@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Entitas;
 using Sources.GamePlay.Common;
 using Sources.Networking.Client;
+using Sources.Tools;
+using UnityEngine;
 
 public class CommandMoveSystem : ReactiveSystem<InputEntity>
 {
@@ -14,7 +16,6 @@ public class CommandMoveSystem : ReactiveSystem<InputEntity>
         _movers = contexts.game.GetGroup(GameMatcher.AllOf(GameMatcher.Mover));
         _gameContext = contexts.game;
         _client = services.ClientSystem;
-        
     }
 
     protected override ICollector<InputEntity> GetTrigger(IContext<InputEntity> context)
@@ -32,28 +33,16 @@ public class CommandMoveSystem : ReactiveSystem<InputEntity>
         foreach (var e in entities)
         {
             var clientId = _client.ConnectionId.Id.ToString();
+            var curTick = _gameContext.tick.CurrentTick;
+
             var moversList = new List<GameEntity>(_movers.GetEntities());
             var curMover = moversList.Find(m => m.moverID.value == clientId);
             if (curMover == null) continue;
-            var curTick = _gameContext.lastTick.Value + 1;
             var tarPosition = e.mouseDown.position;
-            var moverDirection = curMover.direction.Value;
-            if (curMover.hasMove)
-            {
-                curMover.ReplaceMove(tarPosition, curTick, moverDirection);
-            }
-            else
-            {
-                curMover.AddMove(tarPosition, curTick, moverDirection);
-            }
-            curMover.isMoveComplete = false;
-            curMover.ReplaceLastMoveTick(curTick);
-            var command = new ClientBeeMoveCommand {Tick = curTick, Target = tarPosition};
-            var moveAction = new MoveAction(command, curMover.moverID.value);
+            var command = new ClientBeeMoveCommand {Tick = curTick + 1, Target = tarPosition};
+            var moveAction = new MoveAction(command, clientId);
             Util.GameUtil.AddLocalActionList(_gameContext, moveAction);
             _client.EnqueueCommand(command);
-
-
         }
     }
 }

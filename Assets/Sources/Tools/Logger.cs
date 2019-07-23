@@ -35,22 +35,22 @@ namespace Sources.Tools
 
         private void OnGUI()
         {
-            GUILayout.Space(100);
-            GUILayout.BeginVertical(GUI.skin.box);
-            var counter = 0;
-            lock (_locker)
-            {
-                for (var i = Messages.Count - 1; i >= 0; i--)
-                {
-                    counter++;
-                    var message = Messages[i];
-                    GUILayout.Label(message);
-                    if (counter == DrawCount)
-                        break;
-                }
-            }
-
-            GUILayout.EndVertical();
+//            GUILayout.Space(100);
+//            GUILayout.BeginVertical(GUI.skin.box);
+//            var counter = 0;
+//            lock (_locker)
+//            {
+//                for (var i = Messages.Count - 1; i >= 0; i--)
+//                {
+//                    counter++;
+//                    var message = Messages[i];
+//                    GUILayout.Label(message);
+//                    if (counter == DrawCount)
+//                        break;
+//                }
+//            }
+//
+//            GUILayout.EndVertical();
         }
     }
 }

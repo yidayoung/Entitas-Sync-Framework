@@ -4,7 +4,7 @@ public partial class Sync : INetworkComponent
 {
     public void Serialize(BitBuffer bitBuffer)
 	{
-		bitBuffer.AddUShort(10);
+		bitBuffer.AddUShort(13);
 
 	}
 

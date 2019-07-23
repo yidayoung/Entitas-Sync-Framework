@@ -8,11 +8,14 @@ public static class UnpackEntityUtility
     {
         for (int i = 0; i < entityCount; i++)
         {
-		    var addedComponents = new StringBuilder(128);
-
             var e = game.CreateEntity();
-
-            var componentsCount = buffer.ReadUShort();
+            MakeEntity(e, buffer);
+        }
+    }
+    public static void MakeEntity(GameEntity e, BitBuffer buffer)
+    {
+        var addedComponents = new StringBuilder(128);
+        var componentsCount = buffer.ReadUShort();
 
             for (int j = 0; j < componentsCount; j++)
             {
@@ -73,6 +76,15 @@ public static class UnpackEntityUtility
 					    break;
                     case 6:
 					{
+					    addedComponents.Append(" LastMoveTick ");
+                        var lookup = GameComponentsLookup.LastMoveTick;
+						var comp = e.CreateComponent<LastMoveTickComponent>(lookup);
+						comp.Deserialize(buffer);
+						e.AddComponent(lookup, comp);
+					}
+					    break;
+                    case 7:
+					{
 					    addedComponents.Append(" MoverID ");
                         var lookup = GameComponentsLookup.MoverID;
 						var comp = e.CreateComponent<MoverIDComponent>(lookup);
@@ -80,13 +92,31 @@ public static class UnpackEntityUtility
 						e.AddComponent(lookup, comp);
 					}
 					    break;
-                    case 7:
+                    case 8:
+					{
+					    addedComponents.Append(" Tick ");
+                        var lookup = GameComponentsLookup.Tick;
+						var comp = e.CreateComponent<TickComponent>(lookup);
+						comp.Deserialize(buffer);
+						e.AddComponent(lookup, comp);
+					}
+					    break;
+                    case 9:
+					{
+					    addedComponents.Append(" Ice ");
+                        var lookup = GameComponentsLookup.Ice;
+						var comp = e.CreateComponent<IceComponent>(lookup);
+						comp.Deserialize(buffer);
+						e.AddComponent(lookup, comp);
+					}
+					    break;
+                    case 10:
 					{
 					    addedComponents.Append(" Character ");
                         e.isCharacter = true;
 					}
 					    break;
-                    case 8:
+                    case 11:
 					{
 					    addedComponents.Append(" ControlledBy ");
                         var lookup = GameComponentsLookup.ControlledBy;
@@ -95,7 +125,7 @@ public static class UnpackEntityUtility
 						e.AddComponent(lookup, comp);
 					}
 					    break;
-                    case 9:
+                    case 12:
 					{
 					    addedComponents.Append(" Connection ");
                         var lookup = GameComponentsLookup.Connection;
@@ -104,7 +134,7 @@ public static class UnpackEntityUtility
 						e.AddComponent(lookup, comp);
 					}
 					    break;
-                    case 10:
+                    case 13:
 					{
 					    addedComponents.Append(" Sync ");
                         e.isSync = true;
@@ -112,8 +142,6 @@ public static class UnpackEntityUtility
 					    break;
                 }
             }
-			Logger.I.Log("UnpackEntityUtility", $" Entity-{e.id.Value}: created - ({addedComponents})");
-        }
     }
 	
 	public static void ChangeComponents(GameContext game, BitBuffer buffer, ushort componentCount)
@@ -179,6 +207,15 @@ public static class UnpackEntityUtility
 					    break;
                     case 6:
 					{
+						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed LastMoveTick component");
+                        var lookup = GameComponentsLookup.LastMoveTick;
+						var comp = e.CreateComponent<LastMoveTickComponent>(lookup);
+				        comp.Deserialize(buffer);
+				        e.ReplaceComponent(lookup, comp);
+					}
+					    break;
+                    case 7:
+					{
 						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed MoverID component");
                         var lookup = GameComponentsLookup.MoverID;
 						var comp = e.CreateComponent<MoverIDComponent>(lookup);
@@ -186,13 +223,31 @@ public static class UnpackEntityUtility
 				        e.ReplaceComponent(lookup, comp);
 					}
 					    break;
-                    case 7:
+                    case 8:
+					{
+						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed Tick component");
+                        var lookup = GameComponentsLookup.Tick;
+						var comp = e.CreateComponent<TickComponent>(lookup);
+				        comp.Deserialize(buffer);
+				        e.ReplaceComponent(lookup, comp);
+					}
+					    break;
+                    case 9:
+					{
+						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed Ice component");
+                        var lookup = GameComponentsLookup.Ice;
+						var comp = e.CreateComponent<IceComponent>(lookup);
+				        comp.Deserialize(buffer);
+				        e.ReplaceComponent(lookup, comp);
+					}
+					    break;
+                    case 10:
 					{
 						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed Character component");
                         e.isCharacter = true;
 					}
 					    break;
-                    case 8:
+                    case 11:
 					{
 						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed ControlledBy component");
                         var lookup = GameComponentsLookup.ControlledBy;
@@ -201,7 +256,7 @@ public static class UnpackEntityUtility
 				        e.ReplaceComponent(lookup, comp);
 					}
 					    break;
-                    case 9:
+                    case 12:
 					{
 						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed Connection component");
                         var lookup = GameComponentsLookup.Connection;
@@ -210,7 +265,7 @@ public static class UnpackEntityUtility
 				        e.ReplaceComponent(lookup, comp);
 					}
 					    break;
-                    case 10:
+                    case 13:
 					{
 						Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Changed Sync component");
                         e.isSync = true;
@@ -268,29 +323,47 @@ public static class UnpackEntityUtility
 					    break;
                     case 6:
 					{
+					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed LastMoveTick component");
+                        e.RemoveLastMoveTick();
+					}
+					    break;
+                    case 7:
+					{
 					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed MoverID component");
                         e.RemoveMoverID();
 					}
 					    break;
-                    case 7:
+                    case 8:
+					{
+					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed Tick component");
+                        e.RemoveTick();
+					}
+					    break;
+                    case 9:
+					{
+					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed Ice component");
+                        e.RemoveIce();
+					}
+					    break;
+                    case 10:
 					{
 					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed Character component");
                         e.isCharacter = false;
 					}
 					    break;
-                    case 8:
+                    case 11:
 					{
 					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed ControlledBy component");
                         e.RemoveControlledBy();
 					}
 					    break;
-                    case 9:
+                    case 12:
 					{
 					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed Connection component");
                         e.RemoveConnection();
 					}
 					    break;
-                    case 10:
+                    case 13:
 					{
 					    Logger.I.Log("UnpackEntityUtility", $" Entity-{entityId}: Removed Sync component");
                         e.isSync = false;

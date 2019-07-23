@@ -4,7 +4,7 @@ public partial class Character : INetworkComponent
 {
     public void Serialize(BitBuffer bitBuffer)
 	{
-		bitBuffer.AddUShort(7);
+		bitBuffer.AddUShort(10);
 
 	}
 

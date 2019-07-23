@@ -16,16 +16,17 @@ public class RenderPositionSystem : IExecuteSystem
         var entities = _movers.GetEntities();
         foreach (GameEntity e in entities)
         {
-//            Vector2 dirCur = e.position.Value - (Vector2)e.view.gameObject.transform.position;
-//            if (dirCur.sqrMagnitude >= 0.01f || !e.isMoveComplete)
-//            {
-//                e.view.gameObject.transform.position = Vector2.Lerp(e.view.gameObject.transform.position, e.position.Value, 0.1f);
-//            }
-//            else
-//            {
-//                e.view.gameObject.transform.position = e.position.Value;
-//            }
-            e.view.gameObject.transform.position = e.position.Value;
+            
+            Vector2 dirCur = e.position.Value - (Vector2)e.view.gameObject.transform.position;
+            if (dirCur.sqrMagnitude >= 0.01f || !e.isMoveComplete)
+            {
+                e.view.gameObject.transform.position = Vector2.Lerp(e.view.gameObject.transform.position, e.position.Value, 0.1f);
+            }
+            else
+            {
+                e.view.gameObject.transform.position = e.position.Value;
+            }
+//            e.view.gameObject.transform.position = e.position.Value;
         }
     }
 }

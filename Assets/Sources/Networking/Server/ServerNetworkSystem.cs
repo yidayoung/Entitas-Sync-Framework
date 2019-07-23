@@ -10,10 +10,10 @@ using Sources.Tools;
 
 namespace Sources.Networking.Server
 {
-    public class ServerNetworkSystem : IExecuteSystem, ITearDownSystem, IInitializeSystem
+    public class ServerNetworkSystem : IExecuteSystem, ITearDownSystem
     {
         public const ushort MaxPlayers = 5;
-        public       ushort TickRate   = 20;
+        public       ushort TickRate   = 50;
 
         private readonly List<GameEntity>   _connectionsBuffer = new List<GameEntity>(MaxPlayers);
         private readonly IGroup<GameEntity> _connectionsGroup;
@@ -301,11 +301,6 @@ namespace Sources.Networking.Server
             Stoppoed
         }
 
-        public void Initialize()
-        {
-            //服务器模式启动的时候直接设定启动时间，让Tick计数可以开始累加
-            _game.SetStartTime(0, DateTime.Now);
-        }
     }
 
     public enum ServerState

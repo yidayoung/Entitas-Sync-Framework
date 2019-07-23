@@ -38,16 +38,7 @@ public partial class MoveComponent : IComponent
     public long move_time;
     public float start_direction;
 
-    public MoveComponent()
-    {
-    }
-
-    public MoveComponent(MoveComponent other)
-    {
-        target = other.target;
-        move_time = other.move_time;
-        start_direction = other.start_direction;
-    }
+  
 }
 
 [Game]
@@ -56,7 +47,8 @@ public class MoveCompleteComponent : IComponent
 }
 
 [Game]
-public class LastMoveTickComponent : IComponent
+[Sync]
+public partial class LastMoveTickComponent : IComponent
 {
     public long value;
 }

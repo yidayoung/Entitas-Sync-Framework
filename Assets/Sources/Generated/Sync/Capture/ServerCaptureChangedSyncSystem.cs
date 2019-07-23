@@ -25,7 +25,7 @@ public class ServerCaptureChangedSyncSystem : ReactiveSystem<GameEntity>
 
 		foreach (var e in entities) {
 		    _server.ChangedComponents.AddUShort(e.id.Value);
-            _server.ChangedComponents.AddUShort(10);
+            _server.ChangedComponents.AddUShort(13);
 			_server.ChangedComponentsCount++;
 		}
 	}

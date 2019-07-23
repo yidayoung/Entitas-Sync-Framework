@@ -7,15 +7,15 @@ namespace Sources.Networking.Server.StateCapture
 {
     public class ServerCreateWorldStateSystem : ReactiveSystem<GameEntity>
     {
-        private readonly BitBuffer        _buffer = new BitBuffer(512);
-        private readonly GameContext      _game;
+        private readonly BitBuffer _buffer = new BitBuffer(512);
+        private readonly GameContext _game;
         private readonly List<GameEntity> _syncBuffer = new List<GameEntity>(256);
 
         private readonly IGroup<GameEntity> _syncGroup;
 
         public ServerCreateWorldStateSystem(Contexts contexts) : base(contexts.game)
         {
-            _game      = contexts.game;
+            _game = contexts.game;
             _syncGroup = _game.GetGroup(GameMatcher.Sync);
         }
 

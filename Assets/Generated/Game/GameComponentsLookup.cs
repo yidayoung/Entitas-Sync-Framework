@@ -10,43 +10,47 @@ public static class GameComponentsLookup {
 
     public const int Character = 0;
     public const int ClientDataBuffer = 1;
-    public const int Connection = 2;
-    public const int ConnectionPeer = 3;
-    public const int ControlledBy = 4;
-    public const int Destroyed = 5;
-    public const int DestroyedListener = 6;
-    public const int Direction = 7;
-    public const int Id = 8;
-    public const int LastMoveTick = 9;
-    public const int LastTick = 10;
-    public const int LocalActionList = 11;
-    public const int MoveComplete = 12;
-    public const int Move = 13;
-    public const int Mover = 14;
-    public const int MoverID = 15;
-    public const int NetCommands = 16;
-    public const int Position = 17;
-    public const int RequiresWorldState = 18;
-    public const int Sprite = 19;
-    public const int StartTime = 20;
-    public const int Sync = 21;
-    public const int Tick = 22;
-    public const int View = 23;
-    public const int ViewPosition = 24;
-    public const int WasSynced = 25;
-    public const int WorldState = 26;
+    public const int ClientWorldStateList = 2;
+    public const int Connection = 3;
+    public const int ConnectionPeer = 4;
+    public const int ControlledBy = 5;
+    public const int Destroyed = 6;
+    public const int DestroyedListener = 7;
+    public const int Direction = 8;
+    public const int Ice = 9;
+    public const int Id = 10;
+    public const int LastMoveTick = 11;
+    public const int LastTick = 12;
+    public const int LocalActionList = 13;
+    public const int MoveComplete = 14;
+    public const int Move = 15;
+    public const int Mover = 16;
+    public const int MoverID = 17;
+    public const int NetCommands = 18;
+    public const int Position = 19;
+    public const int RequiresWorldState = 20;
+    public const int Sprite = 21;
+    public const int StartTime = 22;
+    public const int Sync = 23;
+    public const int Tick = 24;
+    public const int View = 25;
+    public const int ViewPosition = 26;
+    public const int WasSynced = 27;
+    public const int WorldState = 28;
 
-    public const int TotalComponents = 27;
+    public const int TotalComponents = 29;
 
     public static readonly string[] componentNames = {
         "Character",
         "ClientDataBuffer",
+        "ClientWorldStateList",
         "Connection",
         "ConnectionPeer",
         "ControlledBy",
         "Destroyed",
         "DestroyedListener",
         "Direction",
+        "Ice",
         "Id",
         "LastMoveTick",
         "LastTick",
@@ -71,12 +75,14 @@ public static class GameComponentsLookup {
     public static readonly System.Type[] componentTypes = {
         typeof(Character),
         typeof(ClientDataBuffer),
+        typeof(ClientWorldStateListComponent),
         typeof(Connection),
         typeof(ConnectionPeer),
         typeof(ControlledBy),
         typeof(DestroyedComponent),
         typeof(DestroyedListenerComponent),
         typeof(DirectionComponent),
+        typeof(IceComponent),
         typeof(IdComponent),
         typeof(LastMoveTickComponent),
         typeof(LastTickComponent),

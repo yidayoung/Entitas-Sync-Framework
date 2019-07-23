@@ -41,9 +41,10 @@ namespace Sources.Networking.Client
             var ping = timeSpan.TotalMilliseconds - command.ServerMillSec;
             
             var localTick = (long)ping / 20 + command.Tick;
-            
-            _game.ReplaceTick(localTick + 10);
-            _game.SetStartTime(localTick + 10, utcNow);
+            const int addTick = 5;
+            _game.ReplaceTick(localTick + addTick);
+            _game.SetStartTime(localTick + addTick, utcNow);
+            _game.ReplaceLastTick(localTick + addTick);
         }
 
         public void HandleTestCommand(ref ServerTestCommand command)
