@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using DisruptorUnity3d;
@@ -7,6 +8,7 @@ using ENet;
 using Entitas;
 using NetStack.Serialization;
 using Sources.Networking.Server;
+using UnityEngine;
 using EventType = ENet.EventType;
 using Logger = Sources.Tools.Logger;
 
@@ -14,41 +16,47 @@ namespace Sources.Networking.Client
 {
     public class ClientNetworkSystem : IExecuteSystem, ITearDownSystem
     {
-        public ClientState  State = ClientState.Disconnected;
+        public ClientState State = ClientState.Disconnected;
         public ConnectionId ConnectionId;
-        public Peer         ServerConnection;
+        public Peer ServerConnection;
 
-        public ushort TickRate           = 50;
-        public int    PanicCleanupTarget = 6;
-        public int    PanicStateCount    = 10;
+        public ushort TickRate = 50;
+        public int PanicCleanupTarget = 6;
+        public int PanicStateCount = 10;
+        public ushort ExtraPing = 0;
+        public ushort ExtraDownloadPing = 0;
+        public long CurPing = 0;
+        public ushort AddTick = 5;
 
+        private Dictionary<DateTime, List<SendData>> _sendDatas = new Dictionary<DateTime, List<SendData>>();
+        private Dictionary<DateTime, List<IntPtr>> _receiveDatas = new Dictionary<DateTime,List<IntPtr>>();
         public int StatesCount => _states.Count;
 
-        private readonly GameContext          _game;
+        private readonly GameContext _game;
         private readonly ClientCommandHandler _handler;
 
-        private readonly Thread                            _networkThread;
-        private readonly RingBuffer<ReceivedEvent>         _eventsToHandle = new RingBuffer<ReceivedEvent>(1024);
-        private readonly RingBuffer<SendData>              _sendData       = new RingBuffer<SendData>(64);
-        private readonly RingBuffer<NetworkThreadResponse> _responses      = new RingBuffer<NetworkThreadResponse>(8);
-        private readonly RingBuffer<NetworkThreadRequest>  _requests       = new RingBuffer<NetworkThreadRequest>(8);
-        private          Address                           _address;
+        private readonly Thread _networkThread;
+        private readonly RingBuffer<ReceivedEvent> _eventsToHandle = new RingBuffer<ReceivedEvent>(1024);
+        private readonly RingBuffer<SendData> _sendData = new RingBuffer<SendData>(64);
+        private readonly RingBuffer<NetworkThreadResponse> _responses = new RingBuffer<NetworkThreadResponse>(8);
+        private readonly RingBuffer<NetworkThreadRequest> _requests = new RingBuffer<NetworkThreadRequest>(8);
+        private Address _address;
 
         private readonly Queue<IntPtr> _states = new Queue<IntPtr>(124);
 
         private readonly IGroup<GameEntity> _syncGroup;
-        private readonly List<GameEntity>   _syncBuffer = new List<GameEntity>(ServerNetworkSystem.MaxPlayers);
+        private readonly List<GameEntity> _syncBuffer = new List<GameEntity>(ServerNetworkSystem.MaxPlayers);
 
-        public          ushort    EnqueuedCommandCount;
+        public ushort EnqueuedCommandCount;
         public readonly BitBuffer ToServer = new BitBuffer(512);
 
         private readonly BitBuffer _fromServer = new BitBuffer(512);
 
         private bool _firstPacket = true;
-        private Host _host        = new Host();
+        private Host _host = new Host();
 
         private readonly PacketFreeCallback _freeCallback = packet => { Marshal.FreeHGlobal(packet.Data); };
-        private readonly IntPtr             _cachedFreeCallback;
+        private readonly IntPtr _cachedFreeCallback;
 
         public ClientNetworkSystem(GameContext game, GameContext backGame)
         {
@@ -56,17 +64,55 @@ namespace Sources.Networking.Client
 
             _game = backGame;
             _host.Create();
-            _handler           = new ClientCommandHandler(game, this);
+            _handler = new ClientCommandHandler(game, this);
             ConnectionId.IsSet = false;
 
             _networkThread = NetworkThread();
             _networkThread.Start();
-            _syncGroup          = _game.GetGroup(GameMatcher.Sync);
+            _syncGroup = _game.GetGroup(GameMatcher.Sync);
             _cachedFreeCallback = Marshal.GetFunctionPointerForDelegate(_freeCallback);
         }
 
         public void Execute()
         {
+            var now = DateTime.Now;
+            
+//            if (_states.Count > PanicStateCount)
+//            {
+//                //Catchup after lag
+//                while (_states.Count > PanicCleanupTarget)
+//                {
+//                    var curData = _receiveDatas.ContainsKey(now) ? _receiveDatas[now] : new List<IntPtr>();
+//                    while (_states.Count > 0)
+//                    {
+//                        curData.Add(_states.Dequeue());
+//                    }
+//                    _receiveDatas[now] = curData;
+//                }
+//            }
+//            else if (_states.Count > 0)
+//            {
+//                var curData = _receiveDatas.ContainsKey(now) ? _receiveDatas[now] : new List<IntPtr>();
+//                curData.Add(_states.Dequeue());
+//                _receiveDatas[now] = curData;
+//            }
+//            
+//            foreach (var keyValuePair in _receiveDatas.ToList())
+//            {
+//                var thisNow = keyValuePair.Key;
+//                if (thisNow.Ticks + ExtraDownloadPing * 10000 > now.Ticks) continue;
+//                
+//                keyValuePair.Value.Reverse();
+//                var receiveDatas = keyValuePair.Value;
+//                while (receiveDatas.Count > 0)
+//                {
+//                    var data = receiveDatas[0];
+//                    ExecuteState(data);
+//                    receiveDatas.Remove(data);
+//                }
+//                _receiveDatas.Remove(thisNow);
+//            }
+            
             if (_states.Count > PanicStateCount)
             {
                 //Catchup after lag
@@ -80,6 +126,18 @@ namespace Sources.Networking.Client
             {
                 var state = _states.Dequeue();
                 ExecuteState(state);
+            }
+
+            
+            foreach (var keyValuePair in _sendDatas.ToList())
+            {
+                var thisNow = keyValuePair.Key;
+                if (thisNow.Ticks + ExtraPing * 10000 > now.Ticks) continue;
+                _sendDatas.Remove(thisNow);
+                foreach (var thisSendData in keyValuePair.Value)
+                {
+                    _sendData.Enqueue(thisSendData);
+                }
             }
         }
 
@@ -163,7 +221,7 @@ namespace Sources.Networking.Client
                                     _eventsToHandle.Enqueue(new ReceivedEvent
                                         {Data = newPtr, Peer = @event.Peer, EventType = EventType.Receive});
                                 }
-                                
+
                                 @event.Packet.Dispose();
                                 break;
                         }
@@ -202,7 +260,17 @@ namespace Sources.Networking.Client
 
         public void EnqueueSendData(SendData data)
         {
-            _sendData.Enqueue(data);
+            if (ExtraPing == 0)
+            {
+                _sendData.Enqueue(data);
+            }
+            else
+            {
+                var now = DateTime.Now;
+                var curDatas = _sendDatas.ContainsKey(now) ? _sendDatas[now] : new List<SendData>();
+                curDatas.Add(data);
+                _sendDatas[now] = curDatas;
+            }
         }
 
         public void EnqueueRequest(NetworkThreadRequest request)
@@ -251,7 +319,7 @@ namespace Sources.Networking.Client
         {
             PackedDataFlags flags;
             int cursor;
-            
+
             if (_firstPacket)
             {
                 _firstPacket = false;
@@ -263,14 +331,14 @@ namespace Sources.Networking.Client
                 flags = (PackedDataFlags) Marshal.ReadByte(state);
                 cursor = 1;
             }
-            
+
             #region commands
 
             if ((flags & PackedDataFlags.Commands) == PackedDataFlags.Commands)
             {
                 var commandsHeaderSpan = new ReadOnlySpan<ushort>(IntPtr.Add(state, cursor).ToPointer(), 2);
-                var commandCount       = commandsHeaderSpan[0];
-                var commandLength      = commandsHeaderSpan[1];
+                var commandCount = commandsHeaderSpan[0];
+                var commandLength = commandsHeaderSpan[1];
                 cursor += 4;
 
                 if (commandCount > 0)
@@ -283,6 +351,7 @@ namespace Sources.Networking.Client
                     cursor += commandLength;
                 }
             }
+
             #endregion
 
             #region created entities
@@ -291,7 +360,7 @@ namespace Sources.Networking.Client
             {
                 var createdEntitiesHeaderSpan =
                     new ReadOnlySpan<ushort>(IntPtr.Add(state, cursor).ToPointer(), 2);
-                var createdEntitiesCount  = createdEntitiesHeaderSpan[0];
+                var createdEntitiesCount = createdEntitiesHeaderSpan[0];
                 var createdEntitiesLength = createdEntitiesHeaderSpan[1];
                 cursor += 4;
 
@@ -314,7 +383,7 @@ namespace Sources.Networking.Client
             {
                 var removedEntitiesHeaderSpan =
                     new ReadOnlySpan<ushort>(IntPtr.Add(state, cursor).ToPointer(), 2);
-                var removedEntitiesCount  = removedEntitiesHeaderSpan[0];
+                var removedEntitiesCount = removedEntitiesHeaderSpan[0];
                 var removedEntitiesLength = removedEntitiesHeaderSpan[1];
 
                 cursor += 4;
@@ -335,10 +404,10 @@ namespace Sources.Networking.Client
             #region removed components
 
             if ((flags & PackedDataFlags.RemovedComponents) == PackedDataFlags.RemovedComponents)
-            { 
+            {
                 var removedComponentsHeaderSpan =
                     new ReadOnlySpan<ushort>(IntPtr.Add(state, cursor).ToPointer(), 2);
-                var removedComponentsCount  = removedComponentsHeaderSpan[0];
+                var removedComponentsCount = removedComponentsHeaderSpan[0];
                 var removedComponentsLength = removedComponentsHeaderSpan[1];
                 cursor += 4;
 
@@ -356,12 +425,12 @@ namespace Sources.Networking.Client
             #endregion
 
             #region changed components
-            
+
             if ((flags & PackedDataFlags.ChangedComponents) == PackedDataFlags.ChangedComponents)
             {
                 var changedComponentsHeaderSpan =
                     new ReadOnlySpan<ushort>(IntPtr.Add(state, cursor).ToPointer(), 2);
-                var changedComponentsCount  = changedComponentsHeaderSpan[0];
+                var changedComponentsCount = changedComponentsHeaderSpan[0];
                 var changedComponentsLength = changedComponentsHeaderSpan[1];
                 cursor += 4;
 
@@ -388,10 +457,10 @@ namespace Sources.Networking.Client
 
             while (_states.Count > 0) Marshal.FreeHGlobal(_states.Dequeue());
 
-            State              = ClientState.Disconnected;
-            ServerConnection   = new Peer();
+            State = ClientState.Disconnected;
+            ServerConnection = new Peer();
             ConnectionId.IsSet = false;
-            _firstPacket       = true;
+            _firstPacket = true;
 
             _syncGroup.GetEntities(_syncBuffer);
             foreach (var e in _syncBuffer) e.isDestroyed = true;
@@ -428,7 +497,7 @@ namespace Sources.Networking.Client
 
     public struct ConnectionId
     {
-        public bool   IsSet;
+        public bool IsSet;
         public ushort Id;
     }
 }

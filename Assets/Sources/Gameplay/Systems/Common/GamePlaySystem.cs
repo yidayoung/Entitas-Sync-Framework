@@ -10,7 +10,6 @@ public class GamePlaySystem : IExecuteSystem
 {
     private readonly GameContext _context;
     private readonly IGroup<GameEntity> _movers;
-    private IGroup<GameEntity> _fixers;
     private const float MoveSpeed = 0.08f;
     private const float RoteSpeed = 4f;
     private readonly List<GameEntity> _syncBuffer = new List<GameEntity>(256);
@@ -22,7 +21,6 @@ public class GamePlaySystem : IExecuteSystem
         _context = contexts.game;
         _movers = _context.GetGroup(GameMatcher.Mover);
         _ices = _context.GetGroup(GameMatcher.Ice);
-//        _fixers = contexts.game.GetGroup(GameMatcher.Checked);
     }
 
     /// <inheritdoc />
@@ -33,10 +31,8 @@ public class GamePlaySystem : IExecuteSystem
     {
         if (!_context.hasLastTick) return;
         var localActList = _context.hasLocalActionList ? _context.localActionList.Actions : new List<Action>();
-        var localActionIndex = 0;
         var curTick = _context.tick.CurrentTick;
         var lastTick = _context.lastTick.Value;
-        localActList.Sort();
 
 #if CLIENT_MOD
         var clientWorldStates = _context.hasClientWorldStateList
@@ -44,6 +40,7 @@ public class GamePlaySystem : IExecuteSystem
             : new Dictionary<long, ClientWorldState>();
 #endif
 
+        var localActionIndex = 0;
         for (var tick = lastTick + 1; tick <= curTick; tick++)
         {
             DoTick(ref localActionIndex, localActList, tick);
@@ -136,7 +133,6 @@ public class GamePlaySystem : IExecuteSystem
             {
                 e.ReplaceDirection(CalcNextDirection(e));
                 e.ReplacePosition(newPosition);
-//                Debug.Log($"set lastmove {lastTick +1 } curTick : {_context.tick.CurrentTick}");
                 e.ReplaceLastMoveTick(lastTick + 1);
             }
             else
@@ -148,7 +144,6 @@ public class GamePlaySystem : IExecuteSystem
         }
         else
         {
-//            Debug.Log($"set lastmove {lastTick +1 } curTick : {_context.tick.CurrentTick}");
             e.ReplaceLastMoveTick(lastTick + 1);
         }
     }

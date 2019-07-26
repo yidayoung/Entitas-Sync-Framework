@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Entitas;
 using NetStack.Serialization;
-using Sources.GamePlay.Common;
+using Sources.Networking.Client;
 using UnityEngine;
 using Util;
 using Action = Sources.GamePlay.Common.Action;
@@ -23,11 +22,13 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
     private readonly GameContext _tmpGameContext;
 
     private BitBuffer serverBuffer, localBuffer;
+    private ClientNetworkSystem _client;
 
     public StateFixSystem(Contexts contexts, Services services) : base(services.BackContext)
     {
         _context = contexts.game;
         _backGameContext = services.BackContext;
+        _client = services.ClientSystem;
         _tmpGameContext = new GameContext();
         _tmpGameContext.AddEntityIndex(new PrimaryEntityIndex<GameEntity, ushort>(
             "Id",
@@ -56,6 +57,13 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
         ExeState(worldStates[serverTick], serverTick);
         CleanStats(worldStates);
         CleanLocalActions(serverTick);
+        RefreshPing(serverTick);
+    }
+
+    private void RefreshPing(long serverTick)
+    {
+        var difTick = _context.tick.CurrentTick  - serverTick - _client.AddTick;
+        _client.CurPing = difTick * 20;
     }
 
     private void CleanStats(Dictionary<long, ClientWorldState> worldStates)
@@ -96,7 +104,6 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
     private void ExeState(ClientWorldState clientState, long serverTick)
     {
         if (!NeedRollBack(clientState)) return;
-        // 粗暴的直接进行覆盖不太好，Entity上可能绑定了已经初始化好的Object，这些Object没必要释放重新创建@TODO
         Debug.Log($"check失败，需要回滚，当前环境为:{_context.tick.CurrentTick}帧，将回滚到：{serverTick}帧");
         RollBackContext(_context, _backGameContext);
         _context.ReplaceLastTick(serverTick);
@@ -106,7 +113,7 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
     {
         var localActList = _context.hasLocalActionList ? _context.localActionList.Actions : new List<Action>();
         localActList.RemoveAll(x => x.Tick < serverTick);
-        _context.ReplaceLocalActionList(localActList, 0);
+        _context.ReplaceLocalActionList(localActList);
     }
 
     /// <summary>
@@ -196,8 +203,6 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
 
         RollBackEntityIfNeed(context, serverContext, moverMatcher, TakeMoverIdMethod, RollBackMover);
 
-        //@TODO 被服务器check过的做标记，没做标记的放在最后统一删除，然后清除check标记
-
         #endregion
 
         #region Ice
@@ -243,30 +248,32 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
 
             bool FindPredicate(GameEntity x) => takeKeyMethod(x) == takeKeyMethod(serverEntity);
             var localEntity = localEntities.Find(FindPredicate);
-            if (localEntity == null || !CompareEntityUtility.Equals(localEntity, serverEntity, localBuffer, serverBuffer))
+            if (localEntity == null ||
+                !CompareEntityUtility.Equals(localEntity, serverEntity, localBuffer, serverBuffer))
             {
-                localEntity = rollBackMethod(_context, localEntity, serverEntity);   
+                localEntity = rollBackMethod(_context, localEntity, serverEntity);
                 if (localEntity.isMover)
                 {
-                    Debug.LogWarningFormat($"Mover校验失败，进行覆盖 ID: {localEntity.moverID.value} curTick: {_backGameContext.tick.CurrentTick}");    
+                    Debug.LogWarningFormat(
+                        $"Mover校验失败，进行覆盖 ID: {localEntity.moverID.value} curTick: {_backGameContext.tick.CurrentTick}");
                 }
                 else if (localEntity.hasIce)
                 {
-                    Debug.LogWarningFormat($"Ice校验失败，进行覆盖 Owner:{localEntity.ice.Owner} curTick: {_backGameContext.tick.CurrentTick}");
+                    Debug.LogWarningFormat(
+                        $"Ice校验失败，进行覆盖 Owner:{localEntity.ice.Owner} curTick: {_backGameContext.tick.CurrentTick}");
                 }
             }
 
             localEntity.isWasSynced = true;
-            
         }
     }
 
     private GameEntity RollBackMover(GameContext context, GameEntity localMover, GameEntity serverMover)
     {
-        return CopyEntityBase(context, localMover, serverMover);
+        return RollBackEntityBase(context, localMover, serverMover);
     }
 
-    private GameEntity CopyEntityBase(GameContext context, GameEntity localEntity, GameEntity serverEntity)
+    private GameEntity RollBackEntityBase(GameContext context, GameEntity localEntity, GameEntity serverEntity)
     {
         if (localEntity == null)
         {
@@ -305,12 +312,6 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
 
     private GameEntity RollBackIce(GameContext context, GameEntity localIce, GameEntity serverIce)
     {
-        localIce = CopyEntityBase(context, localIce, serverIce);
-        if (!localIce.hasDestroyedListener)
-        {
-            localIce.AddDestroyedListener(new IceDestoryListener());
-        }
-
-        return localIce;
+        return RollBackEntityBase(context, localIce, serverIce);
     }
 }

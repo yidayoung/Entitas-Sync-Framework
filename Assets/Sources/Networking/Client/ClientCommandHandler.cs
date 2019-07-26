@@ -41,7 +41,7 @@ namespace Sources.Networking.Client
             var ping = timeSpan.TotalMilliseconds - command.ServerMillSec;
             
             var localTick = (long)ping / 20 + command.Tick;
-            const int addTick = 5;
+            var addTick = _client.AddTick;
             _game.ReplaceTick(localTick + addTick);
             _game.SetStartTime(localTick + addTick, utcNow);
             _game.ReplaceLastTick(localTick + addTick);

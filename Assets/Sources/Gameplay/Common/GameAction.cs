@@ -16,7 +16,7 @@ namespace Sources.GamePlay.Common
 
     public class Action : IComparable<Action>
     {
-        public readonly long Tick;
+        public long Tick;
         private readonly ActionType _type;
         protected readonly ICommand Command;
         protected readonly string Id;
@@ -62,7 +62,7 @@ namespace Sources.GamePlay.Common
         }
     }
 
-    public class IceDestoryListener : IDestroyedListener
+    public class ViewDestroyListener : IDestroyedListener
     {
         public void OnDestroyed(GameEntity entity)
         {
@@ -106,7 +106,7 @@ namespace Sources.GamePlay.Common
             ice.AddIce(Id, Tick, _lasts);
             ice.isSync = true;
             ice.AddSprite("ice");
-            ice.AddDestroyedListener(new IceDestoryListener());
+            ice.AddDestroyedListener(new ViewDestroyListener());
         }
 
         public override string ToString()

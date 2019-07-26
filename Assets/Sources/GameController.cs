@@ -31,7 +31,8 @@ public class GameController : MonoBehaviour
     private ServerFeature _serverFeature;
 
     private int _tickCount;
-    private ushort _tickrate = 10;
+    private ushort _tickRate = 50;
+    private ushort _ping;
     private float _timer = 1f;
     private int _totalTicksThisSecond;
 
@@ -262,14 +263,28 @@ public class GameController : MonoBehaviour
                     case ClientState.Connected:
                         GUILayout.BeginHorizontal();
                         GUILayout.Label("Connected");
-                        tmp = GUILayout.TextField(_tickrate.ToString(), GUILayout.Width(60));
+                        GUILayout.Label($"Ping {_client.CurPing}");
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                        tmp = GUILayout.TextField(_tickRate.ToString(), GUILayout.Width(60));
                         if (ushort.TryParse(tmp, out result))
                             if (result > 0)
-                                _tickrate = result;
+                                _tickRate = result;
 
                         if (GUILayout.Button("Set tickRate"))
-                            _client.EnqueueCommand(new ClientSetTickrateCommand {Tickrate = _tickrate});
+                            _client.EnqueueCommand(new ClientSetTickrateCommand {Tickrate = _tickRate});
                         
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                        tmp = GUILayout.TextField(_ping.ToString(), GUILayout.Width(60));
+                        if (ushort.TryParse(tmp, out result))
+                            if (result > 0)
+                                _ping = result;
+
+                        if (GUILayout.Button("Set ping"))
+                            _client.ExtraPing = _ping;
+                        if (GUILayout.Button("Set downloadPing"))
+                            _client.ExtraDownloadPing = _ping;
                         GUILayout.EndHorizontal();
                         if (GUILayout.Button("Disconnect"))
                         {

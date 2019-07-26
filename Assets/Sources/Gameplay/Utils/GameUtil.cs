@@ -14,44 +14,14 @@ namespace Util
             if (curTick > action.Tick)
             {
                 Debug.LogError($"msg timeout curTick {curTick}, actionTick {action.Tick}");
-                return;
+                action.Tick = curTick+1;
             }
 
             var preexist = gameContext.hasLocalActionList ? gameContext.localActionList.Actions : new List<Action>();
-            var checkedTick = gameContext.hasLocalActionList ? gameContext.localActionList.CheckedTick : 0;
             preexist.Add(action);
-            gameContext.ReplaceLocalActionList(preexist, checkedTick);
+            gameContext.ReplaceLocalActionList(preexist);
         }
 
-//        public static Action TakeAction(GameContext gameContext)
-//        {
-//            var prevlist = gameContext.hasLoclActionList ? gameContext.loclActionList.actList : new List<Action>();
-//            var checkedTick = gameContext.hasLoclActionList ? gameContext.loclActionList.checkedTick : 0;
-//            var lastAction = prevlist.Find(x => x.tick > checkedTick);
-//            if (lastAction != null)
-//            {
-//                //prevlist.RemoveAt(0);
-//                gameContext.ReplaceLoclActionList(prevlist, lastAction.tick);
-//                return lastAction;
-//            }
-//            else
-//                return null;
-//        }
-//
-//        public static Action TakeDeleteAction(GameContext gameContext)
-//        {
-//            var prevlist = gameContext.hasLoclActionList ? gameContext.loclActionList.actList : new List<Action>();
-//            var checkedTick = gameContext.hasActionList ? gameContext.loclActionList.checkedTick : 0;
-//            var lastAction = prevlist.Find(x => x.tick > checkedTick);
-//            if (lastAction != null)
-//            {
-//                prevlist.RemoveAt(0);
-//                gameContext.ReplaceLoclActionList(prevlist, lastAction.tick);
-//                return lastAction;
-//            }
-//            else
-//                return null;
-//        }
 
         public static Vector3 CutVector(Vector3 v, int size = 4)
         {

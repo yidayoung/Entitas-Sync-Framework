@@ -8,6 +8,7 @@ public class ClientViewFeature : Feature
         Add(new CreateMoverSystem(contexts, services));
         Add(new CommandMoveSystem(contexts, services));
         Add(new AddViewSystem(contexts));
+        Add(new AddDestroyListener(contexts));
         Add(new RenderSpriteSystem(contexts));
         Add(new RenderPositionSystem(contexts));
         Add(new RenderDirectionSystem(contexts));
