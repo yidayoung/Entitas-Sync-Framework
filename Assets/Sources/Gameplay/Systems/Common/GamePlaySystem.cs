@@ -21,6 +21,7 @@ public class GamePlaySystem : IExecuteSystem
         _context = contexts.game;
         _movers = _context.GetGroup(GameMatcher.Mover);
         _ices = _context.GetGroup(GameMatcher.Ice);
+        _context.SetGamePlaySystem(this);
     }
 
     /// <inheritdoc />

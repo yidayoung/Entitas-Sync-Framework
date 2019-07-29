@@ -17,28 +17,29 @@ public static class GameComponentsLookup {
     public const int Destroyed = 6;
     public const int DestroyedListener = 7;
     public const int Direction = 8;
-    public const int Ice = 9;
-    public const int Id = 10;
-    public const int LastMoveTick = 11;
-    public const int LastTick = 12;
-    public const int LocalActionList = 13;
-    public const int MoveComplete = 14;
-    public const int Move = 15;
-    public const int Mover = 16;
-    public const int MoverID = 17;
-    public const int NetCommands = 18;
-    public const int Position = 19;
-    public const int RequiresWorldState = 20;
-    public const int Sprite = 21;
-    public const int StartTime = 22;
-    public const int Sync = 23;
-    public const int Tick = 24;
-    public const int View = 25;
-    public const int ViewPosition = 26;
-    public const int WasSynced = 27;
-    public const int WorldState = 28;
+    public const int GamePlaySystem = 9;
+    public const int Ice = 10;
+    public const int Id = 11;
+    public const int LastMoveTick = 12;
+    public const int LastTick = 13;
+    public const int LocalActionList = 14;
+    public const int MoveComplete = 15;
+    public const int Move = 16;
+    public const int Mover = 17;
+    public const int MoverID = 18;
+    public const int NetCommands = 19;
+    public const int Position = 20;
+    public const int RequiresWorldState = 21;
+    public const int Sprite = 22;
+    public const int StartTime = 23;
+    public const int Sync = 24;
+    public const int Tick = 25;
+    public const int View = 26;
+    public const int ViewPosition = 27;
+    public const int WasSynced = 28;
+    public const int WorldState = 29;
 
-    public const int TotalComponents = 29;
+    public const int TotalComponents = 30;
 
     public static readonly string[] componentNames = {
         "Character",
@@ -50,6 +51,7 @@ public static class GameComponentsLookup {
         "Destroyed",
         "DestroyedListener",
         "Direction",
+        "GamePlaySystem",
         "Ice",
         "Id",
         "LastMoveTick",
@@ -82,6 +84,7 @@ public static class GameComponentsLookup {
         typeof(DestroyedComponent),
         typeof(DestroyedListenerComponent),
         typeof(DirectionComponent),
+        typeof(GamePlaySystemComponent),
         typeof(IceComponent),
         typeof(IdComponent),
         typeof(LastMoveTickComponent),

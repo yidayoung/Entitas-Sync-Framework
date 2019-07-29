@@ -107,6 +107,10 @@ public class StateFixSystem : ReactiveSystem<GameEntity>
         Debug.Log($"check失败，需要回滚，当前环境为:{_context.tick.CurrentTick}帧，将回滚到：{serverTick}帧");
         RollBackContext(_context, _backGameContext);
         _context.ReplaceLastTick(serverTick);
+        if (_context.hasGamePlaySystem)
+        {
+            _context.gamePlaySystem.GamePlaySystem.Execute();
+        }
     }
 
     private void CleanLocalActions(long serverTick)

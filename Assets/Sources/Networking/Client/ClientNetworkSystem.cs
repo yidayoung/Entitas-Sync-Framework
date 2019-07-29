@@ -29,7 +29,7 @@ namespace Sources.Networking.Client
         public ushort AddTick = 5;
 
         private Dictionary<DateTime, List<SendData>> _sendDatas = new Dictionary<DateTime, List<SendData>>();
-        private Dictionary<DateTime, List<IntPtr>> _receiveDatas = new Dictionary<DateTime,List<IntPtr>>();
+        private Dictionary<long, List<IntPtr>> _receiveDatas = new Dictionary<long, List<IntPtr>>();
         public int StatesCount => _states.Count;
 
         private readonly GameContext _game;
@@ -76,59 +76,66 @@ namespace Sources.Networking.Client
         public void Execute()
         {
             var now = DateTime.Now;
-            
+
+            if (_states.Count > PanicStateCount)
+            {
+                var curData = _receiveDatas.ContainsKey(now.Ticks) ? _receiveDatas[now.Ticks] : new List<IntPtr>();
+                //Catchup after lag
+                while (_states.Count > PanicCleanupTarget)
+                {
+                    curData.Add(_states.Dequeue());
+                }
+
+                _receiveDatas[now.Ticks] = curData;
+            }
+            else if (_states.Count > 0)
+            {
+                var curData = _receiveDatas.ContainsKey(now.Ticks) ? _receiveDatas[now.Ticks] : new List<IntPtr>();
+                curData.Add(_states.Dequeue());
+                _receiveDatas[now.Ticks] = curData;
+            }
+
+            var _receives = _receiveDatas.ToList();
+            _receives.Sort((A,B) =>
+            {
+                if (A.Key > B.Key)
+                    return 1;
+                if (A.Key == B.Key)
+                    return 0;
+                return -1;
+            });
+            foreach (var keyValuePair in _receives)
+            {
+                var thisNow = keyValuePair.Key;
+                if (thisNow + ExtraDownloadPing * 10000 > now.Ticks) continue;
+                
+                var receiveDatas = keyValuePair.Value;
+                while (receiveDatas.Count > 0)
+                {
+                    var data = receiveDatas[0];
+                    ExecuteState(data);
+                    receiveDatas.Remove(data);
+                }
+
+                _receiveDatas.Remove(thisNow);
+            }
+
 //            if (_states.Count > PanicStateCount)
 //            {
 //                //Catchup after lag
 //                while (_states.Count > PanicCleanupTarget)
 //                {
-//                    var curData = _receiveDatas.ContainsKey(now) ? _receiveDatas[now] : new List<IntPtr>();
-//                    while (_states.Count > 0)
-//                    {
-//                        curData.Add(_states.Dequeue());
-//                    }
-//                    _receiveDatas[now] = curData;
+//                    var state = _states.Dequeue();
+//                    ExecuteState(state);
 //                }
 //            }
 //            else if (_states.Count > 0)
 //            {
-//                var curData = _receiveDatas.ContainsKey(now) ? _receiveDatas[now] : new List<IntPtr>();
-//                curData.Add(_states.Dequeue());
-//                _receiveDatas[now] = curData;
+//                var state = _states.Dequeue();
+//                ExecuteState(state);
 //            }
-//            
-//            foreach (var keyValuePair in _receiveDatas.ToList())
-//            {
-//                var thisNow = keyValuePair.Key;
-//                if (thisNow.Ticks + ExtraDownloadPing * 10000 > now.Ticks) continue;
-//                
-//                keyValuePair.Value.Reverse();
-//                var receiveDatas = keyValuePair.Value;
-//                while (receiveDatas.Count > 0)
-//                {
-//                    var data = receiveDatas[0];
-//                    ExecuteState(data);
-//                    receiveDatas.Remove(data);
-//                }
-//                _receiveDatas.Remove(thisNow);
-//            }
-            
-            if (_states.Count > PanicStateCount)
-            {
-                //Catchup after lag
-                while (_states.Count > PanicCleanupTarget)
-                {
-                    var state = _states.Dequeue();
-                    ExecuteState(state);
-                }
-            }
-            else if (_states.Count > 0)
-            {
-                var state = _states.Dequeue();
-                ExecuteState(state);
-            }
 
-            
+
             foreach (var keyValuePair in _sendDatas.ToList())
             {
                 var thisNow = keyValuePair.Key;

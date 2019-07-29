@@ -37,3 +37,9 @@ public class NetCommandsComponent : IComponent
 {
     public List<ICommand> Commands;
 }
+
+[Game, Unique]
+public class GamePlaySystemComponent : IComponent
+{
+    public GamePlaySystem GamePlaySystem;
+}
