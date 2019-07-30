@@ -1,111 +1,115 @@
 
+## 简介
+- 框架基于ECS，ECS框架不再做介绍，要完全理解最好专门去看下ECS框架，理解框架必须理解的概念有Entity，Component，System，ReactiveSystem，Context
+- 框架可以确保服务器和客户端使用同一个文件进行逻辑运算，规避掉前后端同步问题
+- 框架提供了同步Tag，只需要给需要同步的Entity打上需要同步标记，则Entity上的所有需要同步的Component会自动同步给客户端
+- 框架提供了纠错机制，服务器同步结果和客户端当时的状态冲突的时候，提供了基础的回滚逻辑，但是和界面内容强相关的必须在基础回滚逻辑上进行判断，最好做优化不要粗暴的做删除重新创建
 
-# Entitas-Sync-Framework
+## 同步主体逻辑
+ ### 服务器部分
+ 服务器负责的主要任务是将所有客户端的输入进行收集汇总验算，他是所有人的决策者，是唯一权威。服务器负责接收所有客户端的指令操作，稍后于客户端进行逻辑计算，计算过程中会把新增的，删除的，修改的Entity进行统计打包
+ 这个逻辑执行的时间为每次Update，Update频率一般是比逻辑帧率低，所以每次Update的时候当前帧数一定会发生变化，每次同步的时候就会带上当前服务器帧号
+ 同时每当有新客户端连接的时候，服务器会制作一个当前的状态的镜像，之后转发给客户端，客户端使用这个镜像进行本地的初始化，而不是像传统帧同步一样，从0帧演播动作序列进行追赶
+ 
+ 
+ 服务器的System大多数都囊括于ServerFeature下，除了网络处理模块ServerNetworkSystem单独做了提前的初始化和Update，一部分原因是因为许多System的初始化依赖除了网络处理模块ServerNetworkSystem单独做了提前的初始化和Update实例
+ 还有部分原因是将网络模块和逻辑模块进行剥离方便将来修改
+ ServerFeature主要以下部分组成：
+ - CommonGamePlayFeature  
+    负责最基础的帧数维护和逻辑主体
+ - ServerGamePlayFeature  
+    只会在服务器出现的额外的逻辑
+ - ServerNetworkFeature  
+    服务器针对网络同步部分做的额外内容，主要包括服务器当前镜像的创建和需要同步内容的广播
+ - CommonGeneratedFeature  
+    现阶段主要处理Entity的销毁，销毁分为两部分，如果Entity带有DestroyedListener,那就会先执行DestroyedListener的回调，然后再执行通用回调将Entity进行销毁
+    这么做的主要目的是把销毁动作进行集中，一方面提高效率，另一方面对因为A系统释放了Entity，B系统却又可能访问这个Entity的情况进行兼容
+ 
+ ### 客户端部分
+ 客户端主要任务是接收用户输入，将输入和当前场景进行结合，翻译成指定的操作命令而不是一个按键或者其他。之后立刻对动作进行响应，同时将动作缓存到本地动作序列中，然后将动作发送给服务器，每个动作必会带上发生的帧数用来做动作标记。
+ 
+ 
+ 客户端会同时存在两个GameContext，一个用来做游戏场景主体，另外一个用来和服务器做同步，称为_backGameContext,后续简称为BC，BC负责将网络内容反映到一个具体的Context中，因为服务器只有在第一次同步的时候会带上服务器的全状态，后面只会同步修改部分，
+ 所以客户端必须维护一个环境用来处理服务器的同步内容，这个环境的输入只有服务器，相当于每个客户端会在自己本地通过网络端的内容维护一个和服务器完全一样的当前环境  
+ 
+ 在BC每次Tick后，客户端会拿去客户端主GameContext（后续简称为MC）生成的历史帧镜像，镜像是一段二进制数据，所以需要还原，因此还有一个_tempGameContext用来处理客户端镜像的还原（后续简称为TC）
+ 客户端将镜像缓存在TC后，TC就是BC当前帧下，客户端当时帧的状态，然后将BC和TC进行比较，如果一致说明客户端当时的预演是正确的，不需要修复。如果有任意不同，则立刻判断需要修复，不再比较其他部分。
+ 判断为需要检查后，客户端会把MC回退到BC的状态，同时，手动调用游戏主逻辑，将游戏逻辑从过去镜像追赶到当前，这时候就会用到之前缓存的本地动作序列  
+  
+ 和服务器相似，客户端的绝大多数System都囊括在ClientFeature下
+ - CommonGamePlayFeature  
+ 和服务器完全一致，包括帧维护，和游戏主题逻辑
+ - ClientGamePlayFeature
+ 客户端独有逻辑，也就是BC维护和MC校正
+ - ClientNetworkFeature
+ 发送客户端指令列表
+ - CommonGeneratedFeature
+ 和服务器基本一致，主要负责Entity销毁，不同的就是同时还负责BC的销毁，TC每次使用都Reset不需要关注销毁
+ 
+ 
+## 命令系统
+  命令指的客户端和服务器之间具有明确标志意义的消息，类似于ProtoBuffer打包的一条指令
+  
+  
+  命令简单的分为TC（发往服务器），TS（发往客户端）,都实现了ICommand接口,TC额外实现了IClientCommand,TS额外实现了IServerCommand，现阶段这两个接口都是空的
+  因此本质上还是一致的
+  
+  新建命令的时候只需要给消息定义的类头处建加上代码生成头即可，TC的加上[CommandToClient],TS的加上[CommandToServer]
+  因为消息最终会打包成二进制，也就是不是支持任意结构的，现阶段只支持简单的基础结构和Unity.Vector,所有支持类型可以在BitBuffer类中进行确认
+  
+  
+  代码生成头除了会帮你生成ICommand接口的实现外，还会添加Handle函数，生成Command后代码立刻会有编译错误，在ClientCommandHandler,ServerCommandHandler完成消息的Handle逻辑即可
+  ICommand的具体内容其实只有简单的打包和解包而已，想看的可以自己看下代码生成部分，在Assets.Sources.Codegen下，里面涉及了部分模板内容，模板部分在最上层的Generators目录下
+  
+  
+## 同步系统
+  整个框架的主体其实就是客户端具有维护一份和服务器完全一致的状态的能力，这个能力的实现也就是框架的核心，这部分的实现主要通过两部分
+  - 需要同步的Entity们  
+  不是所有的Entity都会进行同步，Context下有很多除了游戏主题之外的Entity，我们只需要同步游戏最核心的部分的相关Entity，因此引入了isSync标志，只有有isSync标志的Entity才会被同步系统进行同步
+  也就是创建Entity的时候，对于服务器需要同步部分必须带上isSync标志，也就是设置为true，这样才会被同步到客户端，使用时还需要配合isWasSynced来标志那些创建了却还没完全同步过的内容
+  对于客户端同样也需要加上isSync，不过对于客户端代表是带有isSync标志的Entity是需要进行回滚检查的对象，回滚过程中会将所有比对过的Entity打上isWasSynced标志，第一轮回滚结束后，带有isSync标志却没有isWasSynced标志的Entity会被删除  
+  
+  
+  也就是通过isWasSynced和isSync标志我们框定了需要关注的Entity的范围
+  
+  
+  - 需要同步的Components
+  同样不是所有的Entity的Components都需要同步，所以就会有[Sync]代码生成头，在定义Component的时候，如果这个Component将来需要同步，则必须给Component加上[Sync]代码生成头，
+  同时，class必须定义为partial，因为后续生成代码的时候会对class进行扩展，扩展的内容是实现INetworkComponent接口的内容，其实也就是简单的属性打包，同样这里使用的也是BitBuffer模块，
+  也就是使用的数据类型必须BitBuffer支持
+  
+  
+  也就是说，需要同步的Component通过加上[Sync]代码生成头后，具有了二进制化的能力，将来的Component比较，镜像制作都会用到这部分逻辑
 
-## Features
-- Automatic ECS world synchronization
-- Client-server networking model
-- Command messaging system
-- Code generator based on T4 templating to create neat API, serializers, deserializers and compressors
-- State buffering on the client
-- [Uses ENet for networking](https://github.com/nxrighthere/ENet-CSharp)
-- Native memory allocations
-- Networking is handled by a separate thread, lockless communication with that thread
-- Simple logger
 
-## Overview
-The framework is targeted at slow-paced genres. Gameplay should be delay-tolerant, as clients use state buffering to smoothly display ECS world changes. 
-All packets are sent reliably using a single channel. It means you should not set tickrate too high. Otherwise single dropped packet will block all other already received packets from being executed and in extreme cases state queue will fail to smooth those pauses, producing visible stutter. 
-
-| Overview  |  Creating networking command | Creating networking component | 
-|--|--|--|
-| [![][preview1]](https://www.youtube.com/watch?v=ACZ2bZECRfE) | [![][preview2]](https://www.youtube.com/watch?v=zoPJMG5a84A) | [![][preview3]](https://www.youtube.com/watch?v=GD5dm4FjkOQ) |
-
-### Server
-On the server each client has entity with a **Connection**, **ConnectionPeer** and **ClientDataBuffer** components. 
-When you tell the server to enqueue command for a particular client - it is written into BitBuffer inside **ClientDataBuffer** component. 
-
-Each tick server will execute all received Commands, then it will execute all gameplay systems.
-After that, all changes to the ECS world are captured by reactive systems and written to the 4 bitbuffers which are common for all clients. **Only entities with Sync component attached are handled by automatic synchronization**
-
-The last system for each client combines 1 personal and 4 common BitBuffers into a single byte array, copies data to native memory and publishes a request for a network thread to send data from that native memory to peer from **ConnectionPeer** component. After that, all BitBuffers are cleared.
-
-All gameplay logic should be located inside ServerFeature.
-
-### Client
-The client uses state queue to smooth out ping jitter. 
-The only way for the client to send something to the server is using Commands. 
-When you tell the client to enqueue command - it is written into BitBuffer inside **ClientNetworkSystem**. 
-
-Each tick client will execute all received Commands, then it will execute all gameplay systems.
-After that, it will send all Commands which were enqueued.
-
-The client knows the whole world all the time. In the first packet he receives all entities with Sync component and all their networking components. After that, he will only receive changes which happened in the world.
-
-To react to changes in ECS world you can add systems into ClientFeature. You should not modify networking components in those systems or destroy/create entities with Sync attribute.
-
-## Commands
-
-Both client and server can enqueue commands. You create a struct, set data into fields and call `_server.Enqueue*(command)` or `_client.Enqueue*(command)`. Then that command will be received on connected peer/peers.
-
-To create a new command:
-- Create class or struct and mark it with CommandToServer or CommandToClient attribute
-- Generate code
-- Implement newly generated method from IServerHandler or IClientHandler
-
-### Supported attributes
-- CommandToServer - Should be applied on a type whose fields and name will represent a command which will be sent to the server. Type marked with that attribute is called **scheme**.
-- CommandToClient - Should be applied to a type whose fields and name will represent a command which will be sent to the client.
-- BoundedFloat(*min, max, precision*) - Should be applied on a field with float type inside the scheme. Example usage `[BoundedFloat(-1, 1, 0.01f) public float Value;` In that case values will be `-1.00, -0.99, -0.98,..., 0.98, 0.99, 1.00`
-- BoundedVector2(*xMin, xMax, xPrecision, yMin, yMax, yPrecision*) - Should be applied on a field with UnityEngine.Vector2 type inside the scheme. Under the hood works like 2 float fields with BoundedFloat attributes.
-- BoundedVector3(*xMin, xMax, xPrecision, yMin, yMax, yPrecision, zMin, zMax, zPrecision*)  - Should be applied on a field with UnityEngine.Vector3 type inside the scheme.
-
-## Entity Synchronization 
-
-All entities marked with Sync component will be sent to clients. Only networking components on those entities will be sent to the clients. Everything is handled automatically. You should not add/remove WasSync component from entities, as it will break logic and desync will happen.
-
-Make sure to use only supported field types.
-
-To create new networking component:
-- Create regular Entitas component
-- Add `[Sync]` attribute to the type
-- Generate code
-
-### Special components
-- Connection - Contains client Id
-- ConnectionPeer - Contains ENet.Peer struct, which is used to send packets to
-- ClientDataBuffer  - Contains ushort and BitBuffer fields to represent the count of personal commands and their serialized data
-- Id - Automatically attached to all created entities on the server. Highly used by network layer to find entities.
-- Sync - Only those entities, which have Sync component attached will be synced to the clients. At the end of the tick when Sync component was added runs reactive system (**ServerCaptureCreatedEntitiesSystem**) to serialize that entity with all networking components and then that entity is marked with WasSynced component.
-- WasSynced - All changes which happened to an entity with Sync AND WasSynced components will be serialized by generated systems. If an entity with WasSynced component receives Destroyed component, then is it processed by system (**ServerCaptureRemovedEntitiesSystem**), which serializes that entity as removed one.
-- RequresWorldState - When the client is connected, the entity which represents his connection receives that component. Then the reactive system is triggered to serialize whole world state (**ServerCreateWorldStateSystem**)
-- WorldState - When (**ServerCreateWorldStateSystem**) is triggered, then it creates one entity with reused BitBuffer, which contains all networking entities with all networking components on the server. That entity is removed at the end of the frame. If two clients connect at the same server tick, then both of them will use a single world state.
-### Supported attributes
-- Sync - Should be applied to a partial class, which is Entitas component. The class marked with that attribute is called **networking component**. Networking code is generated only for those components, which are marked with that attribute.
-- BoundedFloat(*min, max, precision*) - Should be applied on a field with float type inside a networking component. Example usage `[BoundedFloat(-1, 1, 0.01f) public float Value;` In that case values will be `-1.00, -0.99, -0.98,..., 0.98, 0.99, 1.00`
-- BoundedVector2(*xMin, xMax, xPrecision, yMin, yMax, yPrecision*) - Should be applied on a field with UnityEngine.Vector2 type inside a networking component. Under the hood works like 2 float fields with BoundedFloat attributes.
-- BoundedVector3(*xMin, xMax, xPrecision, yMin, yMax, yPrecision, zMin, zMax, zPrecision*)  - Should be applied on a field with UnityEngine.Vector3 type inside a networking component.
-
-## Field types supported
-- byte
-- int
-- uint
-- long
-- ulong
-- short
-- ushort
-- string
-- boolean
-- float
-- UnityEngine.Vector2
-- UnityEngine.Vector3
-- non-flag enums
-
-## Dependencies
-- Entitas ECS 1.13.0
-- Unity 2019.1
-- ENet CSharp 2.2.6 
-
-[preview1]: https://i.imgur.com/H4a5rTv.png
-[preview2]: https://i.imgur.com/o0etJ5k.png
-[preview3]: https://i.imgur.com/lty8gA0.png
+## "动作"系统
+  这里的动作统一指的是一个客户端操作在具体场景下的结合产生的具体游戏行为，比如向左移动，停止。
+  所有的动作都必须继承Sources.GamePlay.Common.Action, 基类提供了：
+  - Tick 动作发生的帧数
+  - _type 动作类型
+  - Id 动作发起者
+  - Command 动作对应的命令使用的ICommand类型，所以可以保存所有实现了ICommand接口的子类  
+  同时，必须实现ApplyAction(GameContext gameContext)来定义动作具体的执行内容，当然你需要生成初始化函数完成基类初始化和扩展类字段的初始化
+  
+  
+  对于客户端，操作指令会被EmitInputSystem进行收集，然后创建或者修改用来描述输入器状态的Entity内容，之后会有专门的System关注输入器状态，然后根据输入器状态选择是否要生成命令，
+  如果需要就生成命令，同时加入到自己的本地动作列表，一方面用来让下一帧的时候让动作生效，一方面动作中的Command部分将发送给服务器进行汇总校验
+  对于客户端，本地动作序列还有一个作用就是在MC因为BC进行了回滚后，在进行追赶的时候，还是会套用本地的已经被客户端提前验算过的动作，同时这里也是本地缓存队列的清除时机
+  
+ 
+  对于服务器，会收集客户端发送来的Command然后制作对应的Action子类对象，和客户端一样加入到自己本地动作序列中，等待主体逻辑用来读取和验算，和客户端不同的是，服务器收到某一帧发生的动作的时候，服务器可能已经验算过这一帧了，现在采用的逻辑是
+  将这个动作粗暴的修改为当前服务器下一帧发生的动作，可以理解成如果一个客户端的上传ping特别高的时候，他在本地客户端的100帧发起的移动动作，可能会被服务器校正成105才发起的移动动作，等到服务器计算下一帧后，同步逻辑会让客户端将自己本地的状态
+  修复成这个移动动作是105帧发起的状态，以和其他客户端保持一致。
+  
+  
+  
+基础框架使用的是 https://github.com/RomanZhu/Entitas-Sync-Framework
+对基础框架进行了一些修改不完全一样，现阶段的修改有：
+- 替换了消息打包和解包使用的BitBuffer模块逻辑，去掉了字段压缩逻辑，也就是不再支持BoundedVector2，BoundedVector3这种字段范围描述
+- 同步逻辑同步的对象修改为BC，和表现进行了分离
+- 修改了PackEntity，用来支持客户端镜像生成和Entity比较
+- 新增了增加上传ping和下载ping的接口用来测试同步效果
+ 
+ 
+ 
+ 
